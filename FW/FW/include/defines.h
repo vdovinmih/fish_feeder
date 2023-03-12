@@ -116,7 +116,7 @@
 
 /////////////////////////////////////////////
 
-#define SCAN_WIFI_NETWORKS                  true
+#define SCAN_WIFI_NETWORKS                  false
 
 // To be able to manually input SSID, not from a scanned SSID lists
 #define MANUAL_SSID_INPUT_ALLOWED           true
@@ -134,7 +134,7 @@
 #include <ESPAsync_WiFiManager_Lite.h>
 
 #if ESP8266 
-  #define HOST_NAME   "ESP8266Async-Control"
+  #define HOST_NAME   "FishFeeder-Control"
 #else
   #define HOST_NAME   "ESP32Async-Control"
 #endif

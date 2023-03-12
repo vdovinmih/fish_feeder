@@ -2924,7 +2924,8 @@ bool wps_active = false;
     void startConfigurationMode()
     {
 #if USE_WIFI_WPS
-      startWPSConfigurationMode();    
+      startWPSConfigurationMode();
+      delay(100);
 #endif
 #if SCAN_WIFI_NETWORKS
 	    configTimeout = 0;  // To allow user input in CP
