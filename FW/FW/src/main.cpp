@@ -105,7 +105,7 @@ void setup()
   pinMode(motor2, OUTPUT);
   digitalWrite(motor2, 0);
 
-  analogWriteResolution(8);
+  //analogWriteResolution(8);
 
 
   pinMode(button, INPUT);
