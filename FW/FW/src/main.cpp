@@ -174,11 +174,13 @@ void setup()
   server.on("/api", HTTP_GET, [] (AsyncWebServerRequest *request) {
     String message;
     if (request->hasParam(PARAM_FEED)) {
-      message = request->getParam(PARAM_FEED)->value();
+      //FEED value shuld be int
+      int value = atoi(request->getParam(PARAM_FEED)->value().c_str());
+      message = "GETFEED: " + String(value);
     } else {
-      message = "No message sent";
+      message = "No function";
     }
-    request->send(200, "text/plain", "GETFEED: " + message);
+    request->send(200, "text/plain", message);
   });
 
   server.onNotFound(notFound);
