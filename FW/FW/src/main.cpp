@@ -17,6 +17,7 @@
 #define motor1 D1
 #define motor2 D2
 #define motor_sersor D6
+#define sersor_activate D3
 
 #define button D0
 
@@ -83,7 +84,7 @@ void check_wifi_status()
 
 void read_buttons()
 {
-  btn = digitalRead(button);
+  btn = !digitalRead(button);
 }
 
 
@@ -117,8 +118,9 @@ void setup()
   digitalWrite(motor1, 0);
   pinMode(motor2, OUTPUT);
   digitalWrite(motor2, 0);
-
-  //analogWriteResolution(8);
+  pinMode(sersor_activate, OUTPUT);
+  digitalWrite(sersor_activate, 0);
+  analogWriteResolution(8);
 
 
   pinMode(button, INPUT);
@@ -128,10 +130,6 @@ void setup()
   while (!Serial);
 
   delay(200);
-
-  LittleFS.begin();
-
-
 
   Serial.print(F("\nStarting ESPAsync_WiFi using ")); Serial.print(FS_Name);
   Serial.print(F(" on ")); Serial.println(ARDUINO_BOARD);
@@ -168,6 +166,8 @@ void setup()
   ArduinoOTA.begin();
 
   logger.begin();
+
+  LittleFS.begin();
 
   server.serveStatic("/", LittleFS, "/static_www/");
 
