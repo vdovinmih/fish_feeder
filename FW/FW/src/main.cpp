@@ -17,6 +17,7 @@
 #define motor1 D1
 #define motor2 D2
 #define motor_sersor D6
+#define sersor_activate D3
 
 #define button D0
 
@@ -26,14 +27,14 @@
 #include <ArduinoOTA.h>
 #include "tcp_log.h"
 #include "LittleFS.h"
-#include "FTPServer.h"
+//#include "FTPServer.h"
 
 TcpLogger logger(8081);
 
 const char* PARAM_FEED = "feed";
 AsyncWebServer server(80);
 
-FTPServer ftpSrv(LittleFS);
+//FTPServer ftpSrv(LittleFS);
 
 
 ESPAsync_WiFiManager_Lite* ESPAsync_WiFiManager;
@@ -83,7 +84,7 @@ void check_wifi_status()
 
 void read_buttons()
 {
-  btn = digitalRead(button);
+  btn = !digitalRead(button);
 }
 
 
@@ -117,7 +118,8 @@ void setup()
   digitalWrite(motor1, 0);
   pinMode(motor2, OUTPUT);
   digitalWrite(motor2, 0);
-
+  pinMode(sersor_activate, OUTPUT);
+  digitalWrite(sersor_activate, 0);
   //analogWriteResolution(8);
 
 
@@ -187,7 +189,7 @@ void setup()
 
   server.begin();
 
-  ftpSrv.begin("admin", "admin");
+  //ftpSrv.begin("admin", "admin");
 
 }
 
@@ -259,7 +261,7 @@ void loop()
 
   ArduinoOTA.handle();
  
-  ftpSrv.handleFTP();
+  //ftpSrv.handleFTP();
 
 #if USE_DYNAMIC_PARAMETERS
   displayCredentialsInLoop();
