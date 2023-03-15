@@ -17,7 +17,10 @@
 #define motor1 D1
 #define motor2 D2
 #define motor_sersor D6
-#define sersor_activate D3
+#define sensor_activate D3
+#define sensor_on 0
+#define sensor_off 1
+#define diode D7
 
 #define button D0
 
@@ -28,6 +31,9 @@
 #include "tcp_log.h"
 #include "LittleFS.h"
 #include "FTPServer.h"
+
+#include "AsyncJson.h"
+#include "ArduinoJson.h"
 
 TcpLogger logger(8081);
 
@@ -80,14 +86,17 @@ void check_wifi_status()
     checkstatus_timeout = millis() + HEARTBEAT_INTERVAL;
   }
 }
-  bool btn;
 
-void read_buttons()
-{
-  btn = !digitalRead(button);
+void activate_sensor(){
+  logger.println("Sensor active");
+  digitalWrite(sensor_activate, sensor_on);
+}
+void deactivate_sensor(){
+  logger.println("Sensor inactive");
+  digitalWrite(sensor_activate, sensor_off);
 }
 
-
+bool btn;
 void check_buttons()
 {
   static unsigned long checkstatus_timeout = 0;
@@ -95,8 +104,67 @@ void check_buttons()
 #define BUTTONS_REFRESH_INTERVAL    100L
   if ((millis() > checkstatus_timeout) || (checkstatus_timeout == 0))
   {
-    read_buttons();
+    btn = !digitalRead(button);
     checkstatus_timeout = millis() + BUTTONS_REFRESH_INTERVAL;
+  }
+}
+
+int do_feed_counter;
+void do_feed(int count)
+{
+  do_feed_counter = count;
+  activate_sensor();
+  delay(50);
+}
+
+void check_motor_sensor()
+{
+  static int prv_state = -1;
+  static unsigned long checkstatus_timeout = 0;
+#define SENSOR_REFRESH_INTERVAL    20L
+  if (((millis() > checkstatus_timeout) || (checkstatus_timeout == 0)) && do_feed_counter > 0)
+  {
+    bool value = digitalRead(motor_sersor);
+    if (prv_state == -1) prv_state = value;
+    if (prv_state != value){
+      digitalWrite(diode, value);
+      if (value){
+        logger.println("diode=1");
+      }else{
+        logger.println("diode=0");
+      }
+      if (do_feed_counter > 0)
+      {
+        do_feed_counter -= 1;
+        if (do_feed_counter == 0) {
+          deactivate_sensor();
+        }
+      }
+      prv_state = value;
+    }
+    checkstatus_timeout = millis() + SENSOR_REFRESH_INTERVAL;
+  }
+}
+
+
+void motor_run()
+{
+  #define MOTOR_REFRESH_INTERVAL    100L
+  static unsigned long checkstatus_timeout = 0;
+  static int motor_status = 0;
+  if ((millis() > checkstatus_timeout) || (checkstatus_timeout == 0))
+  {
+    int new_motor_status = 0;
+    if (do_feed_counter > 0){
+      new_motor_status = 255;
+    } else {
+      digitalWrite(diode, 0);
+    }
+    if (motor_status != new_motor_status){
+      analogWrite(motor1, new_motor_status);
+      motor_status = new_motor_status;
+    }
+    checkstatus_timeout = millis() + MOTOR_REFRESH_INTERVAL;
   }
 }
 
@@ -111,17 +179,21 @@ void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
 }
 
+
 void setup()
 {
+
+  analogWriteResolution(8);
 
   pinMode(motor1, OUTPUT);
   digitalWrite(motor1, 0);
   pinMode(motor2, OUTPUT);
   digitalWrite(motor2, 0);
-  pinMode(sersor_activate, OUTPUT);
-  digitalWrite(sersor_activate, 0);
-  analogWriteResolution(8);
 
+  pinMode(sensor_activate, OUTPUT);
+  digitalWrite(sensor_activate, sensor_off);
+
+  pinMode(diode, OUTPUT);
 
   pinMode(button, INPUT);
 
@@ -176,12 +248,31 @@ void setup()
     if (request->hasParam(PARAM_FEED)) {
       //FEED value shuld be int
       int value = atoi(request->getParam(PARAM_FEED)->value().c_str());
+      do_feed(value);
       message = "GETFEED: " + String(value);
     } else {
       message = "No function";
     }
     request->send(200, "text/plain", message);
   });
+
+  AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler("/post-message", [](AsyncWebServerRequest *request, JsonVariant &json) {
+    StaticJsonDocument<200> data;
+    if (json.is<JsonArray>())
+    {
+      data = json.as<JsonArray>();
+    }
+    else if (json.is<JsonObject>())
+    {
+      data = json.as<JsonObject>();
+    }
+    String response;
+    serializeJson(data, response);
+    request->send(200, "application/json", response);
+    Serial.println(response);
+  });
+  server.addHandler(handler);
+
 
   server.onNotFound(notFound);
 
@@ -228,25 +319,6 @@ void displayCredentialsInLoop()
 
 #endif
 
-void motor_run()
-{
-  #define MOTOR_REFRESH_INTERVAL    100L
-  static unsigned long checkstatus_timeout = 0;
-  static int motor_status = 0;
-  if ((millis() > checkstatus_timeout) || (checkstatus_timeout == 0))
-  {
-    int new_motor_status = 0;
-    if (btn){
-      new_motor_status = 255;
-    }
-    if (motor_status != new_motor_status){
-      analogWrite(motor1, new_motor_status);
-      motor_status = new_motor_status;
-    }
-    checkstatus_timeout = millis() + MOTOR_REFRESH_INTERVAL;
-  }
-}
-
 WiFiClient client;
 
 void loop()
@@ -254,6 +326,7 @@ void loop()
   ESPAsync_WiFiManager->run();
   check_wifi_status();
   check_buttons();
+  check_motor_sensor();
   motor_run();
   logger.loop();
 
