@@ -3,7 +3,7 @@
 
 void TcpLogger::loop()
 {
-    WiFiClient new_client = available();
+    WiFiClient new_client = accept();
     
     if (new_client) {
         Serial.println("TCP console connected");

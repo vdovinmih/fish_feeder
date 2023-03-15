@@ -27,14 +27,14 @@
 #include <ArduinoOTA.h>
 #include "tcp_log.h"
 #include "LittleFS.h"
-//#include "FTPServer.h"
+#include "FTPServer.h"
 
 TcpLogger logger(8081);
 
 const char* PARAM_FEED = "feed";
 AsyncWebServer server(80);
 
-//FTPServer ftpSrv(LittleFS);
+FTPServer ftpSrv(LittleFS);
 
 
 ESPAsync_WiFiManager_Lite* ESPAsync_WiFiManager;
@@ -120,7 +120,7 @@ void setup()
   digitalWrite(motor2, 0);
   pinMode(sersor_activate, OUTPUT);
   digitalWrite(sersor_activate, 0);
-  //analogWriteResolution(8);
+  analogWriteResolution(8);
 
 
   pinMode(button, INPUT);
@@ -130,10 +130,6 @@ void setup()
   while (!Serial);
 
   delay(200);
-
-  LittleFS.begin();
-
-
 
   Serial.print(F("\nStarting ESPAsync_WiFi using ")); Serial.print(FS_Name);
   Serial.print(F(" on ")); Serial.println(ARDUINO_BOARD);
@@ -171,6 +167,8 @@ void setup()
 
   logger.begin();
 
+  LittleFS.begin();
+
   server.serveStatic("/", LittleFS, "/static_www/");
 
   server.on("/api", HTTP_GET, [] (AsyncWebServerRequest *request) {
@@ -189,7 +187,7 @@ void setup()
 
   server.begin();
 
-  //ftpSrv.begin("admin", "admin");
+  ftpSrv.begin("admin", "admin");
 
 }
 
@@ -261,7 +259,7 @@ void loop()
 
   ArduinoOTA.handle();
  
-  //ftpSrv.handleFTP();
+  ftpSrv.handleFTP();
 
 #if USE_DYNAMIC_PARAMETERS
   displayCredentialsInLoop();
